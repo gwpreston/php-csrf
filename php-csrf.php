@@ -1,11 +1,11 @@
 <?php
 /**
  * php-csrf v1.0.3
- * 
+ *
  * Single PHP library file for protection over Cross-Site Request Forgery
  * Easily generate and manage CSRF tokens in groups.
  *
- * 
+ *
  * MIT License
  *
  * Copyright (c) 2020 Grammatopoulos Athanasios-Vasileios
@@ -294,7 +294,13 @@ class CSRF_Hash {
 	 * @return string 	The generated hash
 	 */
 	private function _generateHash ($n) {
-		return bin2hex(openssl_random_pseudo_bytes($n/2));
+	  if (function_exists('random_bytes')) {
+	    return bin2hex(random_bytes($n/2));
+	  }
+	  if (function_exists('mcrypt_create_iv')) {
+	    return bin2hex(mcrypt_create_iv($n/2, MCRYPT_DEV_URANDOM));
+	  }
+	  return bin2hex(openssl_random_pseudo_bytes($n/2));
 	}
 
 	/**
@@ -313,7 +319,21 @@ class CSRF_Hash {
 	 * @return boolean
 	 */
 	public function verify ($hash, $context='') {
-		if (strcmp($context, $this->context) === 0 && !$this->hasExpire() && strcmp($hash, $this->hash) === 0) {
+		if (strcmp($context, $this->context) === 0 && !$this->hasExpire() && $this->_verify($hash)) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Verify hash
+	 * @return boolean
+	 */
+	public function _verify ($hash) {
+	  if (function_exists('hash_equals') && hash_equals($hash, $this->hash)) {
+	    return true;
+	  }
+		if (strcmp($hash, $this->hash) === 0) {
 			return true;
 		}
 		return false;
